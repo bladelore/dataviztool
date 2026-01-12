@@ -1,4 +1,4 @@
-from dataLoader import UciDataLoader
+# from dataLoader import UciDataLoader
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, LogisticRegression
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, GradientBoostingRegressor, GradientBoostingClassifier
 from sklearn.svm import SVR, SVC
@@ -8,6 +8,13 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, SpectralClustering, MeanShift, Birch
 from sklearn.mixture import GaussianMixture
 from sklearn.pipeline import make_pipeline
+from inspect import signature
+from sklearn.utils._param_validation import (
+    StrOptions,
+    Interval,
+)
+
+from sklearn.utils._param_validation import Interval
 
 class ModelSelector:
     # Define model classes
@@ -68,7 +75,7 @@ class ModelSelector:
                 return model_type
         
         raise ValueError(f"Model '{model_name}' not found. Available: {self.list_all_models()}")
-    
+        
     def create_pipeline(self, model_name: str, **model_params):
         """Create pipeline, ensuring model type matches dataset task"""
         model_type = self.get_model_type(model_name)
@@ -96,10 +103,8 @@ class ModelSelector:
         model_type = self.get_model_type(model_name)
         
         if model_type == 'clustering':
-            # Clustering is unsupervised - only needs X
             pipeline.fit(self.data.X)
         else:
-            # Supervised learning needs X and y
             pipeline.fit(self.data.X, self.data.y)
         
         return pipeline
@@ -116,6 +121,41 @@ class ModelSelector:
         if model_type not in self.MODELS:
             raise ValueError(f"Type '{model_type}' not found. Available: {list(self.MODELS.keys())}")
         return sorted(self.MODELS[model_type].keys())
+
+    def get_model_param_specs(self, model_name: str):
+        model_type = self.get_model_type(model_name)
+        model_cls = self.MODELS[model_type][model_name]
+        model = model_cls()
+
+        sig = signature(model_cls.__init__)
+        defaults = {
+            k: v.default
+            for k, v in sig.parameters.items()
+            if k != "self" and v.default is not v.empty
+        }
+
+        constraints = getattr(model, "_parameter_constraints", {})
+        specs = {}
+
+        for param, default in defaults.items():
+            spec = {
+                "default": default,
+                "type": type(default).__name__,
+            }
+
+            for c in constraints.get(param, []):
+                # Only apply constraint matching default type
+                if isinstance(c, Interval) and isinstance(default, c.type):
+                    spec["min"] = c.left
+                    spec["max"] = c.right
+
+                elif isinstance(c, StrOptions):
+                    spec["options"] = sorted(c.options)
+
+            specs[param] = spec
+
+        return specs
+
     
 # data = UciDataLoader(9)
 
