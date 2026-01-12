@@ -19,6 +19,7 @@ class UciDataLoader:
         self.targets: Optional[pl.DataFrame] = None
         self.variables: Optional[pl.DataFrame] = None
         self.tasks: Optional[List[str]] = None
+        self.info: Optional[str] = None
     
     def load(self, datasetName: str, handleMissing: bool = True) -> 'UciDataLoader':
         """Load a specific dataset by index"""
@@ -28,6 +29,7 @@ class UciDataLoader:
         self.features = pl.DataFrame(self.dataTables.features) # type: ignore
         self.targets = pl.DataFrame(self.dataTables.targets) # type: ignore
         self.variables = pl.DataFrame(self.dataset.variables)
+        self.info = self.dataset.metadata.additional_info.summary
         
         if handleMissing:
             combined = pl.concat([self.features, self.targets], how="horizontal")
@@ -71,3 +73,9 @@ class UciDataLoader:
             datasets[name.strip()] = int(id_str)
         
         return datasets
+    
+# print(fetch_ucirepo(id=1))
+
+# data = UciDataLoader().load("Abalone")
+
+# print(data.info)

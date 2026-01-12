@@ -1,139 +1,49 @@
 import streamlit as st
 from scripts.simpleModelLoader import ModelSelector
 from scripts.dataLoader import UciDataLoader
+from scripts.streamlitUtils import render_model_param, visualise_classification, visualise_clustering, visualise_regression
 import plotly_express as px
 from sklearn.model_selection import train_test_split
 import plotly.express as px
-import plotly.figure_factory as ff
-from sklearn.metrics import confusion_matrix
-import numpy as np
-from sklearn.decomposition import PCA
-
-def render_model_param(spec, name):
-    default = spec["default"]
-
-    if "options" in spec:
-        return st.selectbox(
-            name,
-            spec["options"],
-            index=spec["options"].index(default) if default in spec["options"] else 0,
-        )
-
-    if isinstance(default, bool):
-        return st.checkbox(name, value=default)
-
-    # Integer
-    if isinstance(default, int):
-        min_v = spec.get("min")
-        max_v = spec.get("max")
-
-        min_v = int(min_v) if min_v is not None else None
-        max_v = int(max_v) if max_v is not None else None
-
-        # 🚨 Guard: only apply bounds if default is valid
-        if (min_v is not None and default < min_v) or \
-           (max_v is not None and default > max_v):
-            min_v, max_v = None, None
-
-        return st.number_input(
-            name,
-            value=default,
-            min_value=min_v,
-            max_value=max_v,
-            step=1,
-        )
-
-    # Float
-    if isinstance(default, float):
-        min_v = spec.get("min")
-        max_v = spec.get("max")
-
-        min_v = float(min_v) if min_v is not None else None
-        max_v = float(max_v) if max_v is not None else None
-
-        # 🚨 Guard: only apply bounds if default is valid
-        if (min_v is not None and default < min_v) or \
-           (max_v is not None and default > max_v):
-            min_v, max_v = None, None
-
-        return st.number_input(
-            name,
-            value=default,
-            min_value=min_v,
-            max_value=max_v,
-        )
-
-    if isinstance(default, str):
-        return st.text_input(name, value=default)
-
-    if default is None:
-        return st.text_input(name, value="")
-
-    st.text(f"{name}: {default} ({spec['type']})")
-    return default
-
-
-def visualise_classification(pipeline, X_test, y_test):
-    y_pred = pipeline.predict(X_test)
-
-    fig = px.scatter(
-        x=y_test,
-        y=y_pred,
-        labels={"x": "True Label", "y": "Predicted Label"},
-        title="Predicted vs True Labels"
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    cm = confusion_matrix(y_test, y_pred)
-    fig_cm = ff.create_annotated_heatmap(
-        z=cm,
-        x=[f"Pred {i}" for i in range(cm.shape[1])],
-        y=[f"True {i}" for i in range(cm.shape[0])],
-        colorscale="Blues"
-    )
-    fig_cm.update_layout(title="Confusion Matrix")
-    st.plotly_chart(fig_cm, use_container_width=True)
-
-def visualise_regression(pipeline, X_test, y_test):
-    y_pred = pipeline.predict(X_test)
-
-    fig = px.scatter(
-        x=y_test,
-        y=y_pred,
-        labels={"x": "Actual", "y": "Predicted"},
-        title="Predicted vs Actual"
-    )
-    fig.add_shape(
-        type="line",
-        x0=y_test.min(),
-        y0=y_test.min(),
-        x1=y_test.max(),
-        y1=y_test.max(),
-        line=dict(dash="dash")
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-def visualise_clustering(pipeline, data):
-    X_transformed = pipeline[:-1].transform(data.X)
-    labels = pipeline[-1].labels_
-
-    pca = PCA(n_components=2)
-    X_2d = pca.fit_transform(X_transformed)
-
-    fig = px.scatter(
-        x=X_2d[:, 0],
-        y=X_2d[:, 1],
-        color=labels.astype(str),
-        title="Clustering Visualization (PCA)",
-        labels={"x": "PC1", "y": "PC2"}
-    )
-    st.plotly_chart(fig, use_container_width=True)
 
 VISUALISERS = {
     "classification": visualise_classification,
     "regression": visualise_regression,
     "clustering": visualise_clustering,
 }
+
+def doTraining(model_name):
+    try:
+        pipeline = selector.fit(model_name)
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            data.X, data.y, test_size=test_size, random_state=42
+        )
+
+        st.success("✅ Model trained successfully!")
+
+        model_type = selector.get_model_type(model_name)
+
+        # Score
+        if model_type != "clustering":
+            score = pipeline.score(X_test, y_test)
+            st.metric("Model Score (R² / Accuracy)", f"{score:.4f}")
+        else:
+            labels = pipeline[-1].labels_
+            st.metric("Number of Clusters", len(set(labels)))
+
+        # Visualisation
+        st.subheader("Model Visualisation")
+
+        visualiser = VISUALISERS.get(model_type)
+
+        if model_type == "clustering":
+            visualiser(pipeline, data)
+        else:
+            visualiser(pipeline, X_test, y_test)
+
+    except Exception as e:
+        st.error(f"❌ Error during training: {str(e)}")
 
 loader = UciDataLoader()
 datasetOptions = loader.datasets
@@ -160,7 +70,6 @@ option = st.selectbox(
 
 # Load and display data
 if option:
-
     with st.spinner(f"Loading {option}..."):
         data = loader.load(option)
     
@@ -175,32 +84,39 @@ if option:
         st.metric("Tasks", ", ".join(data.tasks))
     
     # Tabs for different views
-    tab1, tab2, tab3, tab4 = st.tabs(["Features", "Targets", "Raw Data", "Model Training"])
+    tab1, tab2 = st.tabs(["Features/Targets", "Model Training"])
     
     with tab1:
-        st.subheader("Features")
-        st.dataframe(data.features, width='stretch')
-        
-        # Feature statistics
+        st.subheader("Data Summary")
+        st.write(data.info)  # or st.write(data.info) for nicer formatting
+        if data.targets.columns:
+            target_name = data.targets.columns[0]
+        else:
+            target_name = "Class"
+            
+        st.subheader("Variable info")
+        st.dataframe(data.variables, width='content')
+
+        st.subheader("Data")
+        st.dataframe(data.data, width='content')
+
+        # Feature statistics (only features, not target)
         with st.expander("Feature Statistics"):
             st.write(data.features.describe())
+
+        st.subheader("Targets")
+        fig = px.histogram(
+            x=data.targets[target_name],
+            title=f"{target_name} Distribution",
+            labels={"x": target_name, "y": "Count"}
+        )
+        st.plotly_chart(fig, width='content')
     
     with tab2:
-        st.subheader("Targets")
-        fig = px.histogram(x=data.y, title="Target Distribution")
-        st.plotly_chart(fig, width='stretch')
-    
-    with tab3:
-        st.subheader("Complete Dataset")
-        st.dataframe(data.data, width='stretch')
-    
-    with tab4:
         st.subheader("Model Training")
 
-        # Initialize ModelSelector
         selector = ModelSelector(data)
 
-        # Determine available models based on task type
         task_types = ['regression', 'classification', 'clustering']
         available_models = []
 
@@ -214,6 +130,14 @@ if option:
             options=available_models,
             index=0
         )
+
+        if data.targets.shape[1] > 1:
+            selected_target = st.selectbox(
+                "Select Target Column",
+                options=data.targets.columns.tolist()
+            )
+        else:
+            selected_target = data.targets.columns[0]
 
         # Show default parameters
         st.subheader("Model Parameters")
@@ -238,38 +162,7 @@ if option:
         # Train button
         if st.button("Train Model", type="primary"):
             with st.spinner(f"Training {model_name}..."):
-                try:
-                    # Train model
-                    pipeline = selector.fit(model_name)
-
-                    X_train, X_test, y_train, y_test = train_test_split(
-                        data.X, data.y, test_size=test_size, random_state=42
-                    )
-
-                    st.success("✅ Model trained successfully!")
-
-                    model_type = selector.get_model_type(model_name)
-
-                    # Score
-                    if model_type != "clustering":
-                        score = pipeline.score(X_test, y_test)
-                        st.metric("Model Score (R² / Accuracy)", f"{score:.4f}")
-                    else:
-                        labels = pipeline[-1].labels_
-                        st.metric("Number of Clusters", len(set(labels)))
-
-                    # Visualisation
-                    st.subheader("Model Visualisation")
-
-                    visualiser = VISUALISERS.get(model_type)
-
-                    if model_type == "clustering":
-                        visualiser(pipeline, data)
-                    else:
-                        visualiser(pipeline, X_test, y_test)
-
-                except Exception as e:
-                    st.error(f"❌ Error during training: {str(e)}")
+                doTraining(model_name)
 
 
 else:
