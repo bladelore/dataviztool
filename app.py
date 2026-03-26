@@ -58,7 +58,7 @@ if 'loader' not in st.session_state:
 loader = st.session_state.loader
 datasetOptions = loader.datasets
 
-st.title("🤖 UCI ML Model Visualizer")
+st.title("UCI ML Model Visualizer")
 
 # Dataset selection
 option = st.selectbox(
@@ -74,7 +74,7 @@ if option:
         data = loader.load(option)
     
     # Display metadata
-    st.subheader(f"📊 Dataset: {option}")
+    st.subheader(f"Dataset: {option}")
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Samples", data.features.shape[0])
@@ -166,5 +166,5 @@ if option:
 
 
 else:
-    st.info("👈 Select a dataset to get started")
+    st.info("Select a dataset to get started")
     
