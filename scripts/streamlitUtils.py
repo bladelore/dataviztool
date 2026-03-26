@@ -13,7 +13,7 @@ def visualise_classification(pipeline, X_test, y_test):
         labels={"x": "True Label", "y": "Predicted Label"},
         title="Predicted vs True Labels"
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='content')
 
     cm = confusion_matrix(y_test, y_pred)
     fig_cm = ff.create_annotated_heatmap(
@@ -23,7 +23,7 @@ def visualise_classification(pipeline, X_test, y_test):
         colorscale="Blues"
     )
     fig_cm.update_layout(title="Confusion Matrix")
-    st.plotly_chart(fig_cm, use_container_width=True)
+    st.plotly_chart(fig_cm, width='content')
 
 def visualise_regression(pipeline, X_test, y_test):
     y_pred = pipeline.predict(X_test)
@@ -42,7 +42,7 @@ def visualise_regression(pipeline, X_test, y_test):
         y1=y_test.max(),
         line=dict(dash="dash")
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='content')
 
 def visualise_clustering(pipeline, data):
     X_transformed = pipeline[:-1].transform(data.X)
@@ -58,7 +58,7 @@ def visualise_clustering(pipeline, data):
         title="Clustering Visualization (PCA)",
         labels={"x": "PC1", "y": "PC2"}
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='content')
 
 def render_model_param(spec, name):
     default = spec["default"]

@@ -14,6 +14,19 @@ from sklearn.utils._param_validation import (
     Interval,
 )
 
+# from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+# from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
+# from sklearn.gaussian_process import GaussianProcessClassifier
+# from sklearn.gaussian_process.kernels import RBF
+# from sklearn.inspection import DecisionBoundaryDisplay
+# from sklearn.naive_bayes import GaussianNB
+# from sklearn.neighbors import KNeighborsClassifier
+# from sklearn.neural_network import MLPClassifier
+# from sklearn.pipeline import make_pipeline
+# from sklearn.preprocessing import StandardScaler
+# from sklearn.svm import SVC
+# from sklearn.tree import DecisionTreeClassifier
+
 from sklearn.utils._param_validation import Interval
 
 class ModelSelector:
@@ -144,7 +157,6 @@ class ModelSelector:
             }
 
             for c in constraints.get(param, []):
-                # Only apply constraint matching default type
                 if isinstance(c, Interval) and isinstance(default, c.type):
                     spec["min"] = c.left
                     spec["max"] = c.right

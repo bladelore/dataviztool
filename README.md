@@ -2,6 +2,6 @@ Visualise all the UCI Machine Learning datasets + a variety of scikit-learn mode
 view at https://dataviztool-ae.streamlit.app/
 
 TODO:
--hyperparameter tuning
--XGBoost
--tests
+* hyperparameter tuning
+* XGBoost
+* tests
