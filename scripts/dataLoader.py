@@ -6,6 +6,8 @@ from typing import List, Dict, Optional, Any
 from sklearn.compose import make_column_transformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
+MAX_ROWS = 100000
+
 class UciDataLoader:
     def __init__(self):
         """Initialize without loading a dataset"""
@@ -34,11 +36,10 @@ class UciDataLoader:
         if handleMissing:
             combined = pl.concat([self.features, self.targets], how="horizontal")
             clean_combined = combined.drop_nulls()
+            if clean_combined.height > MAX_ROWS:
+                clean_combined = clean_combined.sample(MAX_ROWS, seed=42)
             self.features = clean_combined.select(self.features.columns)
             self.targets = clean_combined.select(self.targets.columns)
-        
-        self.tasks = [s.lower() for s in self.dataset.metadata.tasks]
-        return self
     
     @property
     def X(self) -> pl.DataFrame:

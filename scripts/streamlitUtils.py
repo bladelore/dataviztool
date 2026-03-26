@@ -15,7 +15,6 @@ def visualise_classification(pipeline, X_test, y_test):
     y_pred = pipeline.predict(X_test)
     labels = sorted(set(y_test))
 
-    # --- Scoring metrics ---
     report = classification_report(y_test, y_pred, output_dict=True)
     report_df = pd.DataFrame(report).T.round(3)
     report_df = report_df.drop(index=["accuracy", "macro avg", "weighted avg"], errors="ignore")
@@ -31,7 +30,6 @@ def visualise_classification(pipeline, X_test, y_test):
     with col3:
         st.metric("Weighted F1", f"{report['weighted avg']['f1-score']:.4f}")
 
-    # --- Confusion matrix ---
     st.subheader("Confusion Matrix")
     cm = confusion_matrix(y_test, y_pred, labels=labels)
     fig_cm = ff.create_annotated_heatmap(
@@ -48,7 +46,6 @@ def visualise_classification(pipeline, X_test, y_test):
     )
     st.plotly_chart(fig_cm, use_container_width=True)
 
-    # --- Predicted vs True scatter ---
     st.subheader("Predicted vs True Labels")
     fig = px.scatter(
         x=y_test,
@@ -60,7 +57,6 @@ def visualise_classification(pipeline, X_test, y_test):
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- Per-class accuracy bar chart ---
     st.subheader("Per-Class Accuracy")
     class_acc = {
         str(l): np.mean(np.array(y_pred)[np.array(y_test) == l] == l)
@@ -83,7 +79,6 @@ def visualise_regression(pipeline, X_test, y_test):
     y_pred = np.array(y_pred).ravel()
     residuals = y_test - y_pred
 
-    # --- Scoring metrics ---
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("R²", f"{r2_score(y_test, y_pred):.4f}")
@@ -94,7 +89,6 @@ def visualise_regression(pipeline, X_test, y_test):
     with col4:
         st.metric("MSE", f"{mean_squared_error(y_test, y_pred):.4f}")
 
-    # --- Predicted vs Actual ---
     st.subheader("Predicted vs Actual")
     fig = px.scatter(
         x=y_test,
@@ -113,7 +107,6 @@ def visualise_regression(pipeline, X_test, y_test):
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- Residuals vs Predicted ---
     st.subheader("Residuals vs Predicted")
     fig_res = px.scatter(
         x=y_pred,
@@ -125,7 +118,6 @@ def visualise_regression(pipeline, X_test, y_test):
     fig_res.add_hline(y=0, line_dash="dash", line_color="red")
     st.plotly_chart(fig_res, use_container_width=True)
 
-    # --- Residual distribution ---
     st.subheader("Residual Distribution")
     fig_hist = px.histogram(
         x=residuals,
@@ -135,7 +127,6 @@ def visualise_regression(pipeline, X_test, y_test):
     )
     st.plotly_chart(fig_hist, use_container_width=True)
 
-    # --- Actual vs index (sorted) ---
     st.subheader("Actual vs Predicted (sorted by actual)")
     sorted_idx = np.argsort(y_test)
     fig_line = go.Figure()
@@ -153,7 +144,6 @@ def visualise_clustering(pipeline, data):
     X_transformed = pipeline[:-1].transform(data.X)
     labels = pipeline[-1].labels_
 
-    # --- Cluster size distribution ---
     unique, counts = np.unique(labels, return_counts=True)
     col1, col2 = st.columns(2)
     with col1:
@@ -172,7 +162,6 @@ def visualise_clustering(pipeline, data):
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # --- PCA 2D scatter ---
     st.subheader("Cluster Visualisation (PCA 2D)")
     pca = PCA(n_components=2)
     X_2d = pca.fit_transform(X_transformed)
@@ -186,7 +175,6 @@ def visualise_clustering(pipeline, data):
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- PCA 3D scatter ---
     if X_transformed.shape[1] >= 3:
         st.subheader("Cluster Visualisation (PCA 3D)")
         pca3 = PCA(n_components=3)
