@@ -40,6 +40,9 @@ class UciDataLoader:
                 clean_combined = clean_combined.sample(MAX_ROWS, seed=42)
             self.features = clean_combined.select(self.features.columns)
             self.targets = clean_combined.select(self.targets.columns)
+
+        self.tasks = [s.lower() for s in self.dataset.metadata.tasks]
+        return self
     
     @property
     def X(self) -> pl.DataFrame:
