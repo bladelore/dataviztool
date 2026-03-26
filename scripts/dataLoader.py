@@ -46,7 +46,7 @@ class UciDataLoader:
     
     @property
     def y(self):
-        return self.targets.to_numpy().ravel()  # type: ignore
+        return self.targets.to_numpy().squeeze()  # type: ignore
     
     def make_preprocessor(self):
         preprocessor = make_column_transformer(

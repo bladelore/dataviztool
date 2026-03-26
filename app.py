@@ -1,10 +1,10 @@
 import streamlit as st
+import polars as pl
 from scripts.simpleModelLoader import ModelSelector
 from scripts.dataLoader import UciDataLoader
 from scripts.streamlitUtils import render_model_param, visualise_classification, visualise_clustering, visualise_regression
-import plotly_express as px
-from sklearn.model_selection import train_test_split
 import plotly.express as px
+from sklearn.model_selection import train_test_split
 
 VISUALISERS = {
     "classification": visualise_classification,
@@ -45,10 +45,6 @@ def doTraining(model_name):
     except Exception as e:
         st.error(f"❌ Error during training: {str(e)}")
 
-loader = UciDataLoader()
-datasetOptions = loader.datasets
-
-# Page config
 st.set_page_config(page_title="UCI ML Model Visualizer", layout="wide")
 
 # Initialize loader
@@ -73,7 +69,6 @@ if option:
     with st.spinner(f"Loading {option}..."):
         data = loader.load(option)
     
-    # Display metadata
     st.subheader(f"Dataset: {option}")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -83,35 +78,38 @@ if option:
     with col3:
         st.metric("Tasks", ", ".join(data.tasks))
     
-    # Tabs for different views
+    has_targets = data.targets is not None and len(data.targets.columns) > 0
+
     tab1, tab2 = st.tabs(["Features/Targets", "Model Training"])
     
     with tab1:
         st.subheader("Data Summary")
-        st.write(data.info)  # or st.write(data.info) for nicer formatting
-        if data.targets.columns:
-            target_name = data.targets.columns[0]
-        else:
-            target_name = "Class"
-            
+        st.write(data.info)
+
         st.subheader("Variable info")
         st.dataframe(data.variables, width='content')
 
         st.subheader("Data")
         st.dataframe(data.data, width='content')
 
-        # Feature statistics (only features, not target)
-        with st.expander("Feature Statistics"):
-            st.write(data.features.describe())
-
+        st.subheader("Feature Statistics")
+        st.write(data.features.describe())
+                
         st.subheader("Targets")
-        fig = px.histogram(
-            x=data.targets[target_name],
-            title=f"{target_name} Distribution",
-            labels={"x": target_name, "y": "Count"}
-        )
-        st.plotly_chart(fig, width='content')
-    
+
+        all_cols_df = pl.concat([data.features, data.targets], how="horizontal").to_pandas()
+
+        numeric_cols = all_cols_df.select_dtypes(include="number").columns.tolist()
+
+        if numeric_cols:
+            cols = st.columns(min(len(numeric_cols), 3))
+            for i, col_name in enumerate(numeric_cols):
+                with cols[i % 3]:
+                    fig = px.box(all_cols_df, y=col_name, title=col_name)
+                    st.plotly_chart(fig, width='content')
+        else:
+            st.info("No numeric columns to display.")
+
     with tab2:
         st.subheader("Model Training")
 
@@ -131,15 +129,17 @@ if option:
             index=0
         )
 
-        if data.targets.shape[1] > 1:
-            selected_target = st.selectbox(
-                "Select Target Column",
-                options=data.targets.columns.tolist()
-            )
+        if has_targets:
+            if data.targets.width > 1:
+                selected_target = st.selectbox(
+                    "Select Target Column",
+                    options=data.targets.columns
+                )
+            else:
+                selected_target = data.targets.columns[0]
         else:
-            selected_target = data.targets.columns[0]
+            selected_target = None
 
-        # Show default parameters
         st.subheader("Model Parameters")
         st.write("Edit parameters if needed:")
 
@@ -149,7 +149,6 @@ if option:
         for name, spec in param_specs.items():
             user_params[name] = render_model_param(spec, name)
 
-        # Train/Test split ratio slider
         test_size = st.slider(
             "Test Set Ratio",
             min_value=0.1,
@@ -159,12 +158,9 @@ if option:
             help="Fraction of data to use as test set"
         )
 
-        # Train button
         if st.button("Train Model", type="primary"):
             with st.spinner(f"Training {model_name}..."):
                 doTraining(model_name)
 
-
 else:
     st.info("Select a dataset to get started")
-    
