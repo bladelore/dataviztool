@@ -54,7 +54,7 @@ if 'loader' not in st.session_state:
 loader = st.session_state.loader
 datasetOptions = loader.datasets
 
-st.title("UCI ML Model Visualizer")
+st.title("UCI ML Model Explorer")
 
 # Dataset selection
 option = st.selectbox(
