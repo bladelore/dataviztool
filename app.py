@@ -45,7 +45,7 @@ def doTraining(model_name):
     except Exception as e:
         st.error(f"❌ Error during training: {str(e)}")
 
-st.set_page_config(page_title="UCI ML Model Visualizer", layout="wide")
+st.set_page_config(page_title="UCI ML Model Explorer", layout="wide")
 
 # Initialize loader
 if 'loader' not in st.session_state:
